@@ -1,0 +1,16 @@
+[Unit]
+Description=ActivityWatch Lid Watcher
+Documentation=https://github.com/ActivityWatch/aw-watcher-lid
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/aw-watcher-lid
+Restart=on-failure
+RestartSec=10
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
