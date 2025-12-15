@@ -18,6 +18,17 @@ jobs:
       with:
         python-version: "3.13"
 
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libdbus-1-dev \
+          libgirepository1.0-dev \
+          libcairo2-dev \
+          pkg-config \
+          python3-dev \
+          gir1.2-glib-2.0
+
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
