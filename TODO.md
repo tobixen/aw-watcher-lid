@@ -9,11 +9,6 @@
 
 ## Medium Priority
 
-- [ ] Create v0.1.0 release on GitHub
-  - Tag the current commit
-  - Write release notes highlighting features
-  - Include installation instructions
-
 - [ ] Add link to aw-watcher-lid in ActivityWatch ecosystem
   - Update ActivityWatch fork documentation
   - Consider submitting PR to main ActivityWatch project
@@ -23,6 +18,11 @@
   - Verify D-Bus integration across distributions
   - Test boot gap detection with real reboots
   - Test suspend/resume cycles
+
+- [ ] Create v0.1.0 release on GitHub
+  - Tag the current commit
+  - Write release notes highlighting features
+  - Include installation instructions
 
 ## Low Priority
 
