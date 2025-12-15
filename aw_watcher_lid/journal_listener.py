@@ -90,9 +90,7 @@ class JournalListener:
         ]
 
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=10, check=False
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=False)
 
             if result.returncode != 0:
                 logger.warning(f"journalctl returned {result.returncode}")

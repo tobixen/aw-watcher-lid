@@ -82,9 +82,7 @@ def test_check_for_boot_gap_short_gap(
 
 @patch("aw_watcher_lid.boot_detector.BootDetector._get_boot_time")
 @patch("aw_watcher_lid.boot_detector.BootDetector._get_last_event_time")
-def test_check_for_boot_gap_long_gap(
-    mock_last_event: MagicMock, mock_boot_time: MagicMock
-) -> None:
+def test_check_for_boot_gap_long_gap(mock_last_event: MagicMock, mock_boot_time: MagicMock) -> None:
     """Test boot gap detection with a long gap (above threshold)."""
     watcher = LidWatcher(testing=True)
     watcher._send_event = MagicMock()  # Mock event sending

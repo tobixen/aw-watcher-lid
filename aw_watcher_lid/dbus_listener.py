@@ -87,9 +87,7 @@ class DbusListener:
         """Check current lid state via D-Bus."""
         try:
             # Get logind manager object
-            manager_obj = self.bus.get_object(
-                "org.freedesktop.login1", "/org/freedesktop/login1"
-            )
+            manager_obj = self.bus.get_object("org.freedesktop.login1", "/org/freedesktop/login1")
             manager = self.dbus.Interface(
                 manager_obj, dbus_interface="org.freedesktop.DBus.Properties"
             )

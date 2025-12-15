@@ -15,9 +15,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="ActivityWatch watcher for lid events and system suspend/resume"
     )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose logging"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     parser.add_argument(
         "--testing", action="store_true", help="Run in testing mode (don't connect to AW)"
     )

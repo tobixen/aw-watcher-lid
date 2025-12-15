@@ -55,7 +55,7 @@ class BootDetector:
         # If gap is significant, create boot gap event
         if gap_duration > self.boot_gap_threshold:
             logger.info(
-                f"Boot gap detected: {gap_duration:.0f}s ({gap_duration/3600:.1f}h) "
+                f"Boot gap detected: {gap_duration:.0f}s ({gap_duration / 3600:.1f}h) "
                 f"between {last_event_time} and {boot_time}"
             )
 
