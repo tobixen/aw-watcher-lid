@@ -4,10 +4,6 @@ import tomllib
 from pathlib import Path
 
 DEFAULT_CONFIG = """
-# Minimum lid event duration (seconds)
-# Lid close/open cycles shorter than this are ignored
-min_lid_duration = 10.0
-
 # Enable boot gap detection
 enable_boot_detection = true
 

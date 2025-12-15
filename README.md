@@ -35,38 +35,59 @@ Events are posted to ActivityWatch with type `systemafkstatus`:
 
 ## Installation
 
-### Quick Install (recommended)
-
 ```bash
-# One-command setup (install + enable service)
-make install-all
+# Install the watcher
+make install
 
-# Or step by step:
-make install              # Install the package
-make enable-service       # Install and start the service
-```
-
-### Manual Install
-
-```bash
-# Install with D-Bus support (recommended)
-poetry install --extras dbus
-
-# Or basic install (will use journal polling fallback)
+# Or manually
 poetry install
 ```
 
 ## Usage
 
-```bash
-# Run directly (if installed)
-aw-watcher-lid
+### Method 1: aw-qt Integration (Recommended)
 
-# Or via poetry
+The recommended way to run aw-watcher-lid is through the ActivityWatch GUI (aw-qt), which will manage starting and stopping the watcher automatically.
+
+**To configure aw-qt to start the watcher:**
+
+1. Find your aw-qt config file (usually `~/.config/activitywatch/aw-qt/aw-qt.toml`)
+2. Add aw-watcher-lid to the watchers list:
+
+```toml
+[aw-qt]
+autostart_modules = ["aw-server", "aw-watcher-afk", "aw-watcher-window", "aw-watcher-lid"]
+```
+
+3. Restart aw-qt
+
+The watcher will now start automatically when you launch ActivityWatch.
+
+### Method 2: Systemd Service
+
+If you prefer to run the watcher independently as a systemd user service:
+
+```bash
+# Install and enable the service
+make enable-service
+
+# Check status
+systemctl --user status aw-watcher-lid
+
+# View logs
+journalctl --user -u aw-watcher-lid -f
+```
+
+### Method 3: Manual Execution
+
+For testing or development:
+
+```bash
+# Run directly
 poetry run aw-watcher-lid
 
-# Or via Make
-make test  # Run tests
+# Or after install
+aw-watcher-lid
 ```
 
 ## Configuration
@@ -74,15 +95,18 @@ make test  # Run tests
 Configuration file: `~/.config/aw-watcher-lid/config.toml`
 
 ```toml
-# Minimum lid event duration (seconds)
-min_lid_duration = 10.0
-
 # Enable boot gap detection
 enable_boot_detection = true
 
 # Boot gap threshold (seconds)
+# Gaps longer than this are recorded as system downtime
 boot_gap_threshold = 300.0
+
+# Polling interval when using journal fallback (seconds)
+journal_poll_interval = 60.0
 ```
+
+**Note:** The watcher reports ALL lid events and suspend/resume actions. Event filtering (e.g., ignoring short cycles) should be configured in aw-export-timewarrior, not in the watcher itself.
 
 ## Systemd Service
 
@@ -113,6 +137,30 @@ make uninstall-service
 ## Integration with aw-export-timewarrior
 
 This watcher is designed to work with [aw-export-timewarrior](https://github.com/ActivityWatch/aw-export-timewarrior), which merges lid events with regular AFK events to provide accurate time tracking.
+
+The watcher reports ALL lid closures and suspend actions. Event filtering (e.g., ignoring cycles shorter than 10 seconds) is handled in aw-export-timewarrior, not in the watcher itself.
+
+## Technical Details
+
+### D-Bus Requirement
+
+**aw-watcher-lid requires D-Bus** to monitor lid and suspend events via systemd-logind. D-Bus is included as a standard dependency and does not require root permissions.
+
+The watcher uses:
+- `org.freedesktop.login1.Manager` interface for suspend/resume events
+- `org.freedesktop.UPower` device properties for lid state changes
+
+### Journal Fallback (Not Recommended)
+
+A journal polling fallback is included in the code but **is not recommended** and **not properly tested**.
+
+The journal fallback:
+- Polls `journalctl` for systemd-logind messages every 60 seconds
+- Requires the service to run with root privileges OR user to be in the `systemd-journal` group
+- Has higher latency than D-Bus (up to 60s delay)
+- May miss rapid lid open/close cycles
+
+**If D-Bus is not available on your system, it's better to fix the D-Bus installation than to use the journal fallback.**
 
 ## Development
 

@@ -119,15 +119,8 @@ class LidWatcher:
             return
 
         duration = (end_time - self.current_event_start).total_seconds()
-        min_duration = self.config.get("min_lid_duration", 10.0)
 
-        # Filter out short events (except boot gaps)
-        if duration < min_duration:
-            logger.debug(f"Ignoring short event ({duration}s < {min_duration}s)")
-            self.current_event_start = None
-            return
-
-        # Send the completed event
+        # Send the completed event (no filtering - that happens in aw-export-timewarrior)
         self._send_event(
             timestamp=self.current_event_start,
             duration=duration,

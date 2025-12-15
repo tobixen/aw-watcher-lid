@@ -17,6 +17,19 @@ help:
 
 install:
 	poetry install
+	@echo ""
+	@echo "✓ aw-watcher-lid installed successfully!"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Recommended: Add to aw-qt (ActivityWatch GUI) config"
+	@echo "     Edit your aw-qt config to start this watcher automatically"
+	@echo ""
+	@echo "  2. Alternative: Run as systemd service"
+	@echo "     make enable-service"
+	@echo ""
+	@echo "  3. Test manually:"
+	@echo "     poetry run aw-watcher-lid"
+	@echo ""
 
 install-dev:
 	poetry install --with dev
