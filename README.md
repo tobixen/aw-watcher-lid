@@ -152,6 +152,8 @@ The watcher uses:
 
 ### Journal Fallback (Not Recommended)
 
+**TODO:** The journal polling fallback should probably be removed completely from the codebase. It adds complexity and is not the correct approach for this functionality.
+
 A journal polling fallback is included in the code but **is not recommended** and **not properly tested**.
 
 The journal fallback:
