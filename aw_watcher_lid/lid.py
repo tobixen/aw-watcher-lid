@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from aw_client import ActivityWatchClient
+from aw_core.models import Event
 
 from .config import load_config
 
@@ -166,12 +167,11 @@ class LidWatcher:
         }
 
         if not self.testing:
-            # Use heartbeat with large pulsetime for event merging
+            # Create Event object and use heartbeat with large pulsetime for event merging
+            event = Event(timestamp=timestamp, duration=duration, data=event_data)
             self.client.heartbeat(
                 self.bucket_id,
-                timestamp=timestamp,
-                duration=duration,
-                data=event_data,
+                event=event,
                 pulsetime=3600,  # 1 hour - events within this window will be merged
             )
 
