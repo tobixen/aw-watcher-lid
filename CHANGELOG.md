@@ -7,11 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2025-12-15
+
+### Added
+
+- Dynamic versioning from git tags using poetry-dynamic-versioning
+- Version number now automatically derived from git tags
+
+### Changed
+
+- Build backend updated to use poetry-dynamic-versioning
+
 ## [0.1.1] - 2025-12-15
 
 ### Added
 
-* Automated publishing to pypi through github actions
+- Automated publishing to PyPI through GitHub Actions
 
 ## [0.1.0] - 2025-12-15
 
@@ -31,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Code formatting and linting with ruff
 - GitHub Actions CI/CD workflows
 
-[unreleased]: https://github.com/tobixen/aw-watcher-lid/compare/v0.1.1...HEAD
+[unreleased]: https://github.com/tobixen/aw-watcher-lid/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/tobixen/aw-watcher-lid/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/tobixen/aw-watcher-lid/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/tobixen/aw-watcher-lid/releases/tag/v0.1.0
