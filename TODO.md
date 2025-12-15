@@ -2,10 +2,10 @@
 
 ## Medium Priority
 
-- [ ] Create v0.1.0 release on GitHub
-  - Tag the current commit
-  - Write release notes highlighting features
-  - Include installation instructions
+- [ ] Publish to PyPI
+  - Configure Poetry for PyPI publishing
+  - Test installation from PyPI
+  - Document PyPI installation method in README
 
 - [ ] Add link to aw-watcher-lid in ActivityWatch ecosystem
   - Update ActivityWatch fork documentation
@@ -46,3 +46,6 @@
 - [x] Add CI/CD pipeline (GitHub Actions for tests and linting)
 - [x] Address integration test failures (marked 3 edge cases as skipped)
 - [x] Fix heartbeat API warning (use Event object instead of individual parameters)
+- [x] Fix all CI/CD pipeline errors (ruff, mypy, formatting)
+- [x] Create CHANGELOG.md following KeepAChangelog standard
+- [x] Prepare v0.1.0 release (ready for signed tag and GitHub release)
