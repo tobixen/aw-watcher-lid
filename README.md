@@ -12,7 +12,17 @@ This project was made using the Claude AI service heavily.  This time no code re
 
 ## Motivation
 
-I'm using `aw-watcher-window-wayland` and it does a fairly good job at tracking my afk status.  I decided to create this watcher while having some bugs with the afk-handling in my aw-export-timewarrior script.  The bugs have been found and dealt with now - but I still think watching the lid status may be useful.  At least for me, this script gives no false postives.  If the lid is closed, I'm by definition away from its keyboard and most likely not doing useful work on it.  (Your situation may of course be different, with external keyboard or other means of working with the laptop).  (False negatives is another thing - the lid may very well be open even if I'm afk - but I may probably train myself to always close the lid before leaving the computer).
+I'm using `aw-watcher-window-wayland` and it does a fairly good job at tracking my afk status.  I decided to create this watcher while having some bugs with the afk-handling in my aw-export-timewarrior script.  The bugs have been found and dealt with now - but I still think watching the lid status may be useful.  At least for me, this method should give no false postives.  If the lid is closed, I'm by definition away from its keyboard and most likely not doing useful work on it.  (Your situation may of course be different, with external keyboard or other means of working with the laptop).  (False negatives is another thing - the lid may very well be open even if I'm afk - but I may probably train myself to always close the lid before leaving the computer).
+
+## Status
+
+Version 0.1.0 is considered to be pretty feature-complete, but hasn't been tested much.  Your help is needed for testing it on different laptops and different OS distributions!
+
+Checklist prior to the 1.0.0-release:
+
+* [ ] I've personally used the watcher for some few days and verified that it works correctly.
+* [ ] ... including suspend detection and boot detection.
+* [ ] At least one other person has tested and approved this watcher.  (Please give me feedback on this!)
 
 ## Features
 
