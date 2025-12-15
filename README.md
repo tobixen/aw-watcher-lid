@@ -38,18 +38,22 @@ Events are posted to ActivityWatch with type `systemafkstatus`:
 ### Quick Install (recommended)
 
 ```bash
-# Install the package
-make install
+# One-command setup (install + enable service)
+make install-all
 
-# Install and enable systemd service
-make install-service
-make enable-service
+# Or step by step:
+make install              # Install the package
+make enable-service       # Install and start the service
 ```
 
 ### Manual Install
 
 ```bash
+# Install with D-Bus support (recommended)
 poetry install --extras dbus
+
+# Or basic install (will use journal polling fallback)
+poetry install
 ```
 
 ## Usage
@@ -82,24 +86,29 @@ boot_gap_threshold = 300.0
 
 ## Systemd Service
 
-Install the systemd service for automatic startup:
+The systemd service runs aw-watcher-lid automatically on login.
+
+### Service Management
 
 ```bash
-# Using Makefile (recommended)
-make install-service
-make enable-service
-
-# Or manually
-cp misc/aw-watcher-lid.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable aw-watcher-lid
-systemctl --user start aw-watcher-lid
-```
-
-Check service status:
-```bash
+# Check status
 systemctl --user status aw-watcher-lid
+
+# View logs
+journalctl --user -u aw-watcher-lid -f
+
+# Stop/start manually
+systemctl --user stop aw-watcher-lid
+systemctl --user start aw-watcher-lid
+
+# Disable auto-start
+make disable-service
+
+# Uninstall service completely
+make uninstall-service
 ```
+
+**Note**: The service file uses `poetry run` to execute the watcher from the project directory. Make sure the project is located at `~/activitywatch/aw-watcher-lid` or update the `WorkingDirectory` in the service file.
 
 ## Integration with aw-export-timewarrior
 

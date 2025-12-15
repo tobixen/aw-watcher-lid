@@ -1,7 +1,8 @@
-.PHONY: help install install-dev test lint format clean uninstall install-service uninstall-service enable-service disable-service
+.PHONY: help install install-dev install-all test lint format clean uninstall install-service uninstall-service enable-service disable-service
 
 help:
 	@echo "Available targets:"
+	@echo "  install-all       - Complete setup (install + enable service)"
 	@echo "  install           - Install the package using poetry"
 	@echo "  install-dev       - Install with development dependencies"
 	@echo "  test              - Run tests"
@@ -10,7 +11,7 @@ help:
 	@echo "  clean             - Remove build artifacts and cache"
 	@echo "  install-service   - Install systemd user service"
 	@echo "  uninstall-service - Uninstall systemd user service"
-	@echo "  enable-service    - Enable and start the service"
+	@echo "  enable-service    - Install and enable the service"
 	@echo "  disable-service   - Disable and stop the service"
 	@echo "  uninstall         - Uninstall the package"
 
@@ -19,6 +20,14 @@ install:
 
 install-dev:
 	poetry install --with dev
+
+install-all: install enable-service
+	@echo ""
+	@echo "✓ Installation complete!"
+	@echo "  The watcher is now installed and running as a systemd service."
+	@echo ""
+	@echo "Check status with: systemctl --user status aw-watcher-lid"
+	@echo "View logs with:    journalctl --user -u aw-watcher-lid -f"
 
 test:
 	poetry run pytest tests/ -v
@@ -52,7 +61,7 @@ uninstall-service:
 	systemctl --user daemon-reload
 	@echo "Service uninstalled."
 
-enable-service:
+enable-service: install-service
 	@echo "Enabling and starting service..."
 	systemctl --user enable aw-watcher-lid
 	systemctl --user start aw-watcher-lid
