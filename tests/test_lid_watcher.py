@@ -1,7 +1,5 @@
 """Tests for LidWatcher."""
 
-from datetime import datetime, timezone
-
 from aw_watcher_lid.lid import LidWatcher
 
 
