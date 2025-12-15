@@ -1,16 +1,13 @@
 [Unit]
 Description=ActivityWatch Lid Watcher
-Documentation=https://github.com/ActivityWatch/aw-watcher-lid
+Documentation=https://github.com/tobixen/aw-watcher-lid
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/activitywatch/aw-watcher-lid
-ExecStart=/usr/bin/poetry run aw-watcher-lid
+ExecStart=aw-watcher-lid
 Restart=on-failure
 RestartSec=10
-
-# Environment
 Environment=PYTHONUNBUFFERED=1
 
 [Install]

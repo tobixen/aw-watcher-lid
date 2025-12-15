@@ -2,9 +2,17 @@
 
 ActivityWatch watcher for laptop lid events and system suspend/resume tracking.
 
+## Disclaimer
+
+This project was made using the Claude AI service heavily.  This time no code reviews utilizing "Natural Human Stupidity" has been made.  NHS has been applied to some of the documentation and some testing efforts.
+
 ## Overview
 
-`aw-watcher-lid` monitors your laptop's lid state and system suspend/resume events, reporting them to ActivityWatch as AFK (away from keyboard) events. This provides more accurate tracking when you close your laptop lid or the system suspends.
+`aw-watcher-lid` monitors your laptop's lid state and system suspend/resume events, reporting them to ActivityWatch as AFK (away from keyboard) events.
+
+## Motivation
+
+I'm using `aw-watcher-window-wayland` and it does a fairly good job at tracking my afk status.  I decided to create this watcher while having some bugs with the afk-handling in my aw-export-timewarrior script.  The bugs have been found and dealt with now - but I still think watching the lid status may be useful.  At least for me, this script gives no false postives.  If the lid is closed, I'm by definition away from its keyboard and most likely not doing useful work on it.  (Your situation may of course be different, with external keyboard or other means of working with the laptop).  (False negatives is another thing - the lid may very well be open even if I'm afk - but I may probably train myself to always close the lid before leaving the computer).
 
 ## Features
 
@@ -35,12 +43,28 @@ Events are posted to ActivityWatch with type `systemafkstatus`:
 
 ## Installation
 
-```bash
-# Install the watcher
-make install
+### From PyPI (Recommended)
 
-# Or manually
+```bash
+# Install with pip
+pip install aw-watcher-lid
+
+# Or with pipx (isolated environment)
+pipx install aw-watcher-lid
+```
+
+### From Source (Development)
+
+```bash
+# Clone the repository
+git clone https://github.com/tobixen/aw-watcher-lid.git
+cd aw-watcher-lid
+
+# Install with Poetry
 poetry install
+
+# Or use the Makefile
+make install
 ```
 
 ## Usage
@@ -67,8 +91,28 @@ The watcher will now start automatically when you launch ActivityWatch.
 
 If you prefer to run the watcher independently as a systemd user service:
 
+**For PyPI installations:**
+
 ```bash
-# Install and enable the service
+# Download and install the service file
+curl -o ~/.config/systemd/user/aw-watcher-lid.service \
+  https://raw.githubusercontent.com/tobixen/aw-watcher-lid/main/misc/aw-watcher-lid.service
+
+# Enable and start the service
+systemctl --user daemon-reload
+systemctl --user enable --now aw-watcher-lid
+
+# Check status
+systemctl --user status aw-watcher-lid
+
+# View logs
+journalctl --user -u aw-watcher-lid -f
+```
+
+**For source installations:**
+
+```bash
+# Install and enable the service using the Makefile
 make enable-service
 
 # Check status
@@ -131,8 +175,6 @@ make disable-service
 # Uninstall service completely
 make uninstall-service
 ```
-
-**Note**: The service file uses `poetry run` to execute the watcher from the project directory. Make sure the project is located at `~/activitywatch/aw-watcher-lid` or update the `WorkingDirectory` in the service file.
 
 ## Integration with aw-export-timewarrior
 
