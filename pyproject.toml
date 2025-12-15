@@ -9,6 +9,17 @@ description = "ActivityWatch watcher for laptop lid events and system suspend/re
 authors = ["Tobias Brox <tobias@redpill-linpro.com>"]
 license = "MPL-2.0"
 readme = "README.md"
+homepage = "https://github.com/tobixen/aw-watcher-lid"
+repository = "https://github.com/tobixen/aw-watcher-lid"
+keywords = ["activitywatch", "watcher", "laptop", "lid", "suspend", "time-tracking"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Utilities",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL-2.0)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
 packages = [{include = "aw_watcher_lid"}]
 
 [tool.poetry.dependencies]
