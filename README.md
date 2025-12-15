@@ -43,29 +43,35 @@ Events are posted to ActivityWatch with type `systemafkstatus`:
 
 ## Installation
 
-### From PyPI (Recommended)
-
-```bash
-# Install with pip
-pip install aw-watcher-lid
-
-# Or with pipx (isolated environment)
-pipx install aw-watcher-lid
-```
-
-### From Source (Development)
+### From Source (Recommended)
 
 ```bash
 # Clone the repository
 git clone https://github.com/tobixen/aw-watcher-lid.git
 cd aw-watcher-lid
 
-# Install with Poetry
-poetry install
-
-# Or use the Makefile
+# Install the watcher
 make install
+
+# The Makefile provides helpful commands for managing the installation:
+make help  # See all available commands
 ```
+
+This method is recommended because it provides clear commands for systemd service management and gives you full control over the installation.
+
+### From PyPI (Alternative)
+
+For Python developers who prefer pip:
+
+```bash
+# Install with pip
+pip install aw-watcher-lid
+
+# Or with pipx (isolated environment, recommended)
+pipx install aw-watcher-lid
+```
+
+Note: When installing from PyPI, you'll need to manually set up the systemd service if needed (see instructions below).
 
 ## Usage
 
