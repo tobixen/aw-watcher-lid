@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "aw-watcher-lid"
-version = "0.1.0"
+version = "0.1.1"
 description = "ActivityWatch watcher for laptop lid events and system suspend/resume"
 authors = ["Tobias Brox <tobias@redpill-linpro.com>"]
 license = "MPL-2.0"

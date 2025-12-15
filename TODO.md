@@ -2,11 +2,6 @@
 
 ## Medium Priority
 
-- [ ] Publish to PyPI
-  - Configure Poetry for PyPI publishing
-  - Test installation from PyPI
-  - Document PyPI installation method in README
-
 - [ ] Add link to aw-watcher-lid in ActivityWatch ecosystem
   - Update ActivityWatch fork documentation
   - Consider submitting PR to main ActivityWatch project
@@ -49,3 +44,5 @@
 - [x] Fix all CI/CD pipeline errors (ruff, mypy, formatting)
 - [x] Create CHANGELOG.md following KeepAChangelog standard
 - [x] Prepare v0.1.0 release (ready for signed tag and GitHub release)
+- [x] Publish to PyPI with automated GitHub Actions workflow
+- [x] Set up PyPI Trusted Publishing for automatic releases on tag push
