@@ -1,7 +1,7 @@
 """D-Bus listener for lid and suspend events via systemd-logind."""
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from .lid import LidWatcher
@@ -19,8 +19,8 @@ class DbusListener:
             watcher: The LidWatcher instance to notify of events
         """
         self.watcher = watcher
-        self.loop = None
-        self.bus = None
+        self.loop: Optional[Any] = None
+        self.bus: Optional[Any] = None
 
         # Import D-Bus libraries
         try:
@@ -85,6 +85,9 @@ class DbusListener:
 
     def _check_lid_state(self) -> None:
         """Check current lid state via D-Bus."""
+        if self.bus is None:
+            return
+
         try:
             # Get logind manager object
             manager_obj = self.bus.get_object("org.freedesktop.login1", "/org/freedesktop/login1")

@@ -3,12 +3,16 @@
 import logging
 import platform
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from aw_client import ActivityWatchClient
 from aw_core.models import Event
 
 from .config import load_config
+
+if TYPE_CHECKING:
+    from .dbus_listener import DbusListener
+    from .journal_listener import JournalListener
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +44,7 @@ class LidWatcher:
         self.current_suspend_state: Optional[str] = None
 
         # Event listener (will be set by start())
-        self.listener = None
+        self.listener: Optional[Union["DbusListener", "JournalListener"]] = None
 
     def _setup_bucket(self) -> None:
         """Create the ActivityWatch bucket if it doesn't exist."""

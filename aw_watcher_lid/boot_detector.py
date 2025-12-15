@@ -122,18 +122,24 @@ class BootDetector:
 
             # Get the event end time (timestamp + duration)
             last_event = events[0]
-            event_start = last_event["timestamp"]
-            event_duration = last_event["duration"]
+            event_start_raw = last_event["timestamp"]
+            event_duration_raw = last_event["duration"]
 
             # Handle both datetime and string timestamps
-            if isinstance(event_start, str):
-                event_start = datetime.fromisoformat(event_start.replace("Z", "+00:00"))
+            if isinstance(event_start_raw, str):
+                event_start: datetime = datetime.fromisoformat(
+                    event_start_raw.replace("Z", "+00:00")
+                )
+            else:
+                event_start = event_start_raw
 
             # Handle both timedelta and float durations
-            if isinstance(event_duration, (int, float)):
-                event_duration = timedelta(seconds=event_duration)
+            if isinstance(event_duration_raw, (int, float)):
+                event_duration: timedelta = timedelta(seconds=event_duration_raw)
+            else:
+                event_duration = event_duration_raw
 
-            event_end = event_start + event_duration
+            event_end: datetime = event_start + event_duration
             return event_end
 
         except Exception as e:
