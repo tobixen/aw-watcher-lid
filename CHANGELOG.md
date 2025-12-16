@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING:** Config file location changed to follow ActivityWatch conventions
+  - Old: `~/.config/aw-watcher-lid/config.toml`
+  - New: `~/.config/activitywatch/aw-watcher-lid/aw-watcher-lid.toml`
+  - Now uses `aw_core.config.load_config_toml` for consistency with other AW components
+  - Simplifies code and ensures all ActivityWatch configs are in one place
+
 ## [0.1.2] - 2025-12-15
 
 ### Added
