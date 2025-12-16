@@ -2,10 +2,6 @@
 
 ## Medium Priority
 
-- [ ] Add link to aw-watcher-lid in ActivityWatch ecosystem
-  - Update ActivityWatch fork documentation
-  - Consider submitting PR to main ActivityWatch project
-
 - [ ] Production testing on real hardware  **help needed**
   - Test on different laptop models
   - Verify D-Bus integration across distributions
@@ -31,6 +27,8 @@
 
 ## Completed ✅
 
+- [x] Add link to aw-watcher-lid in ActivityWatch ecosystem
+  - PR to ActivityWatch docs submitted and accepted
 - [x] Make D-Bus a required dependency
 - [x] Remove 10s event filtering from watcher (moved to aw-export-timewarrior)
 - [x] Document aw-qt integration as recommended method
