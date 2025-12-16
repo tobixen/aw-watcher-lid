@@ -58,9 +58,22 @@ class DbusListener:
         # Check initial lid state
         self._check_lid_state()
 
+        # Set up periodic lid state checking (every 5 seconds)
+        # This is needed because D-Bus doesn't provide signals for lid state changes
+        self.GLib.timeout_add_seconds(5, self._periodic_lid_check)
+
         # Start GLib main loop
         self.loop = self.GLib.MainLoop()
         self.loop.run()
+
+    def _periodic_lid_check(self) -> bool:
+        """Periodic callback to check lid state.
+
+        Returns:
+            True to continue periodic calls
+        """
+        self._check_lid_state()
+        return True  # Continue calling
 
     def stop(self) -> None:
         """Stop the D-Bus listener."""
