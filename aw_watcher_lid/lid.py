@@ -33,7 +33,6 @@ class LidWatcher:
         if not testing:
             self.client = ActivityWatchClient("aw-watcher-lid", testing=testing)
             self.bucket_id = f"aw-watcher-lid_{platform.node()}"
-            self._setup_bucket()
         else:
             self.client = None  # type: ignore
             self.bucket_id = "aw-watcher-lid_test"
@@ -48,12 +47,16 @@ class LidWatcher:
 
     def _setup_bucket(self) -> None:
         """Create the ActivityWatch bucket if it doesn't exist."""
-        self.client.create_bucket(
-            self.bucket_id,
-            event_type="systemafkstatus",
-            queued=True,
-        )
-        logger.info(f"Bucket created/verified: {self.bucket_id}")
+        try:
+            self.client.create_bucket(
+                self.bucket_id,
+                event_type="systemafkstatus",
+                queued=False,  # Create bucket immediately, not queued
+            )
+            logger.info(f"Bucket created/verified: {self.bucket_id}")
+        except Exception as e:
+            logger.warning(f"Failed to create bucket (server may be down): {e}")
+            logger.info("Will retry bucket creation on first event")
 
     def handle_lid_event(self, lid_state: str) -> None:
         """Handle a lid state change event.
@@ -190,6 +193,10 @@ class LidWatcher:
         This will set up the appropriate event listener (D-Bus or journal)
         and begin monitoring for lid and suspend events.
         """
+        # Setup bucket (with retry if server is down)
+        if not self.testing:
+            self._setup_bucket()
+
         # Check for boot gaps on startup
         from .boot_detector import BootDetector
 
@@ -222,5 +229,9 @@ class LidWatcher:
         # Stop the listener
         if self.listener:
             self.listener.stop()
+
+        # Disconnect from ActivityWatch (flushes queued requests)
+        if not self.testing and self.client:
+            self.client.disconnect()
 
         logger.info("Watcher stopped")
