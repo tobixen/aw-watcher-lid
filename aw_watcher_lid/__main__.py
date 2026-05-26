@@ -38,8 +38,7 @@ def main() -> None:
     # Handle signals for graceful shutdown
     def signal_handler(signum: int, frame) -> None:  # type: ignore
         logger.info(f"Received signal {signum}, shutting down...")
-        watcher.stop()
-        sys.exit(0)
+        raise SystemExit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)

@@ -61,3 +61,11 @@ def test_handle_resume() -> None:
     assert watcher.current_event_start is not None
     assert watcher.current_event_start != start_time
     assert watcher.current_suspend_state == "resumed"
+
+
+def test_stop_idempotent() -> None:
+    """Test that calling stop() twice does not raise."""
+    watcher = LidWatcher(testing=True)
+    watcher.handle_lid_event("closed")
+    watcher.stop()
+    watcher.stop()  # should not raise

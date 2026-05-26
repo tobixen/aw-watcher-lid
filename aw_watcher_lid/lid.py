@@ -44,6 +44,7 @@ class LidWatcher:
 
         # Event listener (will be set by start())
         self.listener: Optional[Union["DbusListener", "JournalListener"]] = None
+        self._stopped = False
 
     def _setup_bucket(self) -> None:
         """Create the ActivityWatch bucket if it doesn't exist."""
@@ -222,6 +223,10 @@ class LidWatcher:
 
     def stop(self) -> None:
         """Stop the watcher."""
+        if self._stopped:
+            return
+        self._stopped = True
+
         # Close any pending event
         if self.current_event_start:
             self._close_current_event(datetime.now(timezone.utc))
