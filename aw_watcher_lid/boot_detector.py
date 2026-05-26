@@ -214,13 +214,13 @@ class BootDetector:
 
                 if events:
                     event = events[0]
-                    event_time = event.timestamp if hasattr(event, 'timestamp') else event["timestamp"]
+                    event_time = (
+                        event.timestamp if hasattr(event, "timestamp") else event["timestamp"]
+                    )
 
                     # Handle string timestamps
                     if isinstance(event_time, str):
-                        event_time = datetime.fromisoformat(
-                            event_time.replace("Z", "+00:00")
-                        )
+                        event_time = datetime.fromisoformat(event_time.replace("Z", "+00:00"))
 
                     logger.debug(f"Found activity in {bucket_id} at {event_time}")
 
