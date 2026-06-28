@@ -2,14 +2,14 @@ repos:
   # === PRE-COMMIT STAGE (quick checks on every commit) ===
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.0
+    rev: v0.15.20
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -29,7 +29,7 @@ repos:
         stages: [pre-push]
 
   - repo: https://github.com/pycalendar/ai-prompt-auto-commit
-    rev: v0.0.7
+    rev: v0.0.8
     hooks:
       - id: unstage-ai-prompts
       - id: append-ai-prompts
