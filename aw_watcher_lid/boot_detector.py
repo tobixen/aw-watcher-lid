@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .lid import LidWatcher
@@ -97,7 +97,7 @@ class BootDetector:
             event_source="boot",
         )
 
-    def _get_boot_time(self) -> Optional[datetime]:
+    def _get_boot_time(self) -> datetime | None:
         """Get the system boot time.
 
         Returns:
@@ -126,7 +126,7 @@ class BootDetector:
 
         return None
 
-    def _get_last_event_time(self) -> Optional[datetime]:
+    def _get_last_event_time(self) -> datetime | None:
         """Get the timestamp of the last event from ActivityWatch.
 
         Returns:
@@ -174,7 +174,7 @@ class BootDetector:
 
     def _get_first_activity_after(
         self, start_time: datetime, end_time: datetime
-    ) -> Optional[datetime]:
+    ) -> datetime | None:
         """Check for ActivityWatch activity during a time period.
 
         Queries window and AFK buckets to see if the system was actually
@@ -190,7 +190,7 @@ class BootDetector:
         if self.watcher.testing:
             return None
 
-        first_activity: Optional[datetime] = None
+        first_activity: datetime | None = None
 
         # Get all buckets
         try:

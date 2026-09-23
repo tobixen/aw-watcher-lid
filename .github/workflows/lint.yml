@@ -2,57 +2,44 @@ name: Lint
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.13"
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          libdbus-1-dev \
-          libgirepository-2.0-dev \
-          libgirepository1.0-dev \
-          libcairo2-dev \
-          pkg-config \
-          python3-dev \
-          gir1.2-glib-2.0
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libdbus-1-dev \
+            libgirepository-2.0-dev \
+            libgirepository1.0-dev \
+            libcairo2-dev \
+            pkg-config \
+            python3-dev \
+            gir1.2-glib-2.0
 
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: latest
-        virtualenvs-create: true
-        virtualenvs-in-project: true
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
 
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v4
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-3.13-${{ hashFiles('**/poetry.lock') }}
+      - name: Run ruff check
+        run: ruff check .
 
-    - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --with dev
+      - name: Run ruff format check
+        run: ruff format --check .
 
-    - name: Run ruff check
-      run: poetry run ruff check .
-
-    - name: Run ruff format check
-      run: poetry run ruff format --check .
-
-    - name: Run mypy
-      run: poetry run mypy aw_watcher_lid/ --ignore-missing-imports
+      - name: Run mypy
+        run: mypy aw_watcher_lid/ --ignore-missing-imports

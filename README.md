@@ -60,7 +60,7 @@ Events are posted to ActivityWatch with type `systemafkstatus`:
 git clone https://github.com/tobixen/aw-watcher-lid.git
 cd aw-watcher-lid
 
-# Install the watcher
+# Install the watcher (uses uv, pipx or pip --user, whichever is available)
 make install
 
 # The Makefile provides helpful commands for managing the installation:
@@ -71,15 +71,13 @@ This method is recommended because it provides clear commands for systemd servic
 
 ### From PyPI (Alternative)
 
-For Python developers who prefer pip:
-
 ```bash
-# Install with pip
-pip install aw-watcher-lid
-
-# Or with pipx (isolated environment, recommended)
+uv tool install aw-watcher-lid
+# or
 pipx install aw-watcher-lid
 ```
+
+`dbus-python` and `PyGObject` are compiled on install if no wheel is available, which needs the D-Bus and GObject introspection development headers (e.g. `libdbus-1-dev libgirepository-2.0-dev libcairo2-dev pkg-config` on Debian/Ubuntu).
 
 Note: When installing from PyPI, you'll need to manually set up the systemd service if needed (see instructions below).
 
@@ -114,6 +112,10 @@ If you prefer to run the watcher independently as a systemd user service:
 curl -o ~/.config/systemd/user/aw-watcher-lid.service \
   https://raw.githubusercontent.com/tobixen/aw-watcher-lid/main/misc/aw-watcher-lid.service
 
+# systemd does not search ~/.local/bin, so point ExecStart at the installed script
+sed -i "s|^ExecStart=.*|ExecStart=$(command -v aw-watcher-lid || echo $HOME/.local/bin/aw-watcher-lid)|" \
+  ~/.config/systemd/user/aw-watcher-lid.service
+
 # Enable and start the service
 systemctl --user daemon-reload
 systemctl --user enable --now aw-watcher-lid
@@ -143,16 +145,14 @@ journalctl --user -u aw-watcher-lid -f
 For testing or development:
 
 ```bash
-# Run directly
-poetry run aw-watcher-lid
-
-# Or after install
-aw-watcher-lid
+aw-watcher-lid --verbose
 ```
+
+Run `aw-watcher-lid --help` for the full list of options.  `--testing` runs without connecting to the ActivityWatch server.
 
 ## Configuration
 
-Configuration file: `~/.config/aw-watcher-lid/config.toml`
+Configuration file: `~/.config/activitywatch/aw-watcher-lid/aw-watcher-lid.toml`
 
 ```toml
 # Enable boot gap detection
@@ -194,7 +194,7 @@ make uninstall-service
 
 ## Integration with aw-export-timewarrior
 
-This watcher is designed to work with [aw-export-timewarrior](https://github.com/ActivityWatch/aw-export-timewarrior), which merges lid events with regular AFK events to provide accurate time tracking.
+This watcher is designed to work with [aw-export-timewarrior](https://github.com/tobixen/aw-export-timewarrior), which merges lid events with regular AFK events to provide accurate time tracking.
 
 The watcher reports ALL lid closures and suspend actions. Event filtering (e.g., ignoring cycles shorter than 10 seconds) is handled in aw-export-timewarrior, not in the watcher itself.
 
@@ -228,7 +228,7 @@ The project includes a Makefile with common development tasks:
 
 ```bash
 make help            # Show all available commands
-make install-dev     # Install with dev dependencies
+make dev             # Editable install with dev dependencies + pre-commit hooks
 make test            # Run tests
 make lint            # Run linting
 make format          # Format code

@@ -3,7 +3,7 @@
 import logging
 import platform
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 from aw_client import ActivityWatchClient
 from aw_core.models import Event
@@ -38,12 +38,12 @@ class LidWatcher:
             self.bucket_id = "aw-watcher-lid_test"
 
         # Track current state
-        self.current_event_start: Optional[datetime] = None
-        self.current_lid_state: Optional[str] = None
-        self.current_suspend_state: Optional[str] = None
+        self.current_event_start: datetime | None = None
+        self.current_lid_state: str | None = None
+        self.current_suspend_state: str | None = None
 
         # Event listener (will be set by start())
-        self.listener: Optional[Union["DbusListener", "JournalListener"]] = None
+        self.listener: DbusListener | JournalListener | None = None
         self._stopped = False
 
     def _setup_bucket(self) -> None:
@@ -145,8 +145,8 @@ class LidWatcher:
         self,
         timestamp: datetime,
         duration: float,
-        lid_state: Optional[str],
-        suspend_state: Optional[str],
+        lid_state: str | None,
+        suspend_state: str | None,
         boot_gap: bool,
         event_source: str,
     ) -> None:

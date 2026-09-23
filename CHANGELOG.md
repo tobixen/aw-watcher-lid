@@ -3,12 +3,26 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) - except, for pre-releases PEP440 takes precedence.
 
 ## [Unreleased]
 
+### Added
+
+- `--version` / `-V` command line flag
+- The lid state is polled every 5 seconds, so lid changes are recorded even when no D-Bus signal arrives
+
+### Fixed
+
+- Boot gaps no longer cover time when the system was running but aw-watcher-lid was not; the gap now starts where the last window/AFK activity ended
+
 ### Changed
 
+- Build system migrated from Poetry to hatchling + hatch-vcs; Poetry is no longer needed to install or develop the package.  `__version__` now comes from the git tag instead of being hardcoded (it was stuck at `0.1.0`)
+- `make install` now installs the `aw-watcher-lid` command with uv, pipx or `pip --user` (whichever is available) instead of into a Poetry virtualenv.  `make install-dev` is renamed to `make dev`
+- `make install-service` writes the absolute path of the installed script into the systemd unit, as systemd does not search `~/.local/bin`
+- Minimum Python version lowered from 3.13 to 3.10; CI tests 3.10 to 3.14
+- `aw-core` is now declared as a direct dependency (it was only pulled in via `aw-client`)
 - **BREAKING:** Config file location changed to follow ActivityWatch conventions
   - Old: `~/.config/aw-watcher-lid/config.toml`
   - New: `~/.config/activitywatch/aw-watcher-lid/aw-watcher-lid.toml`

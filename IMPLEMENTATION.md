@@ -24,7 +24,7 @@ aw-watcher-lid/
 │   └── test_lid_watcher.py  # Unit tests (5/5 passing)
 ├── misc/
 │   └── aw-watcher-lid.service  # Systemd service file
-├── pyproject.toml           # Poetry configuration
+├── pyproject.toml           # Package configuration (hatchling + hatch-vcs)
 ├── README.md                # Documentation
 ├── LICENSE                  # MPL-2.0
 └── .gitignore
@@ -128,23 +128,16 @@ All Tests Passing:
 ### Running aw-watcher-lid
 
 ```bash
-# Install dependencies
-cd /home/tobias/activitywatch/aw-watcher-lid
-poetry install --extras dbus
-
-# Run directly
-poetry run aw-watcher-lid
-
-# Or install and run
-poetry install
-~/.local/bin/aw-watcher-lid
+cd aw-watcher-lid
+make install
+aw-watcher-lid
 ```
 
 ### Installing Systemd Service
 
 ```bash
-# Copy service file
-cp misc/aw-watcher-lid.service ~/.config/systemd/user/
+# Install service file
+make install-service
 
 # Enable and start
 systemctl --user enable aw-watcher-lid
@@ -197,8 +190,8 @@ Lid events are converted to AFK-compatible format but preserve original data:
 
 ```bash
 # Run aw-watcher-lid tests
-cd /home/tobias/activitywatch/aw-watcher-lid
-poetry run pytest tests/ -v
+cd aw-watcher-lid
+make test
 
 # Run integration tests
 cd /home/tobias/activitywatch/aw-export-timewarrior
