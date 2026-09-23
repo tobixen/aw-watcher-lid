@@ -1,5 +1,7 @@
 """Tests for LidWatcher."""
 
+from unittest.mock import patch
+
 from aw_watcher_lid.lid import LidWatcher
 
 
@@ -69,3 +71,20 @@ def test_stop_idempotent() -> None:
     watcher.handle_lid_event("closed")
     watcher.stop()
     watcher.stop()  # should not raise
+
+
+class NeverConnectedClient:
+    """Like aw-client's ActivityWatchClient when connect() was never called."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        pass
+
+    def disconnect(self) -> None:
+        raise RuntimeError("cannot join thread before it is started")
+
+
+def test_stop_with_unconnected_client_does_not_raise() -> None:
+    """stop() must not fail on a client whose request queue was never started."""
+    with patch("aw_watcher_lid.lid.ActivityWatchClient", NeverConnectedClient):
+        watcher = LidWatcher(testing=False)
+    watcher.stop()

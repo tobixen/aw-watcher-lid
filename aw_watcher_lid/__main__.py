@@ -39,8 +39,11 @@ def main() -> None:
 
     # Handle signals for graceful shutdown
     def signal_handler(signum: int, frame) -> None:  # type: ignore
+        # Stopping the watcher makes start() return.  Raising SystemExit here
+        # instead would, inside the GLib main loop, kill the interpreter
+        # without running the finally clause below.
         logger.info(f"Received signal {signum}, shutting down...")
-        raise SystemExit(0)
+        watcher.stop()
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)

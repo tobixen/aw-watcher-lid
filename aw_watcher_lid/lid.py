@@ -235,8 +235,4 @@ class LidWatcher:
         if self.listener:
             self.listener.stop()
 
-        # Disconnect from ActivityWatch (flushes queued requests)
-        if not self.testing and self.client:
-            self.client.disconnect()
-
         logger.info("Watcher stopped")
