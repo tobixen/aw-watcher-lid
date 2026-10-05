@@ -25,6 +25,14 @@
   - Fix: track the last lid state reported by logind separately from the event state
   - File: `aw_watcher_lid/dbus_listener.py`
 
+- [ ] Boot-gap detection trusts aw-watcher-afk-prompt events as proof of activity
+  - `_get_last_activity_end()` picks any bucket whose id contains "afk", which also
+    matches `aw-watcher-afk-prompt_<host>`
+  - Those events are user annotations and may be written retroactively, so their end can
+    lie past the real shutdown and push `gap_start` too late
+  - Fix: match `aw-watcher-afk_` and `aw-watcher-window_` by prefix
+  - File: `aw_watcher_lid/boot_detector.py`
+
 ## Low Priority
 
 - [ ] Consider removing journal polling fallback entirely
