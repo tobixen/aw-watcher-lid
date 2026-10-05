@@ -62,9 +62,17 @@ class DbusListener:
         # This is needed because D-Bus doesn't provide signals for lid state changes
         self.GLib.timeout_add_seconds(5, self._periodic_lid_check)
 
-        # Start GLib main loop
+        # Start GLib main loop.  A stop() that lands before run() has its
+        # quit() lost, so the loop checks once it is running.
         self.loop = self.GLib.MainLoop()
+        self.GLib.idle_add(self._quit_if_stopped)
         self.loop.run()
+
+    def _quit_if_stopped(self) -> bool:
+        """Idle callback: quit the loop if the watcher was stopped meanwhile."""
+        if self.watcher._stopped and self.loop:
+            self.loop.quit()
+        return False  # Run once
 
     def _periodic_lid_check(self) -> bool:
         """Periodic callback to check lid state.

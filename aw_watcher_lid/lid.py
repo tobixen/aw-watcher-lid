@@ -197,12 +197,19 @@ class LidWatcher:
         # Setup bucket (with retry if server is down)
         if not self.testing:
             self._setup_bucket()
+        if self._stopped:
+            return
 
         # Check for boot gaps on startup
         from .boot_detector import BootDetector
 
         boot_detector = BootDetector(self)
         boot_detector.check_for_boot_gap()
+
+        # A signal during start-up stopped us before any listener existed
+        # to quit; starting one now would block until SIGKILL.
+        if self._stopped:
+            return
 
         # Try D-Bus first
         try:

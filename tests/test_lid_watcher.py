@@ -1,6 +1,9 @@
 """Tests for LidWatcher."""
 
+import threading
 from unittest.mock import patch
+
+import pytest
 
 from aw_watcher_lid.lid import LidWatcher
 
@@ -88,3 +91,39 @@ def test_stop_with_unconnected_client_does_not_raise() -> None:
     with patch("aw_watcher_lid.lid.ActivityWatchClient", NeverConnectedClient):
         watcher = LidWatcher(testing=False)
     watcher.stop()
+
+
+def _start_in_thread(watcher: LidWatcher) -> threading.Thread:
+    thread = threading.Thread(target=watcher.start, daemon=True)
+    thread.start()
+    thread.join(timeout=5)
+    return thread
+
+
+def test_stop_during_startup_makes_start_return() -> None:
+    """A SIGTERM while the bucket is set up must not leave start() blocking."""
+    watcher = LidWatcher(testing=True)
+    with patch(
+        "aw_watcher_lid.boot_detector.BootDetector.check_for_boot_gap",
+        side_effect=lambda: watcher.stop(),
+    ):
+        thread = _start_in_thread(watcher)
+    assert not thread.is_alive()
+
+
+# PyGObject warns about its own deprecated GLib aliases on import.
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
+def test_dbus_loop_quits_when_stopped_before_it_runs() -> None:
+    """stop() before the GLib loop exists must still end DbusListener.start()."""
+    pytest.importorskip("gi")
+    pytest.importorskip("dbus")
+    from aw_watcher_lid.dbus_listener import DbusListener
+
+    watcher = LidWatcher(testing=True)
+    listener = DbusListener(watcher)
+    watcher.listener = listener
+    with patch.object(listener, "_check_lid_state", side_effect=lambda: watcher.stop()):
+        thread = threading.Thread(target=listener.start, daemon=True)
+        thread.start()
+        thread.join(timeout=5)
+    assert not thread.is_alive()

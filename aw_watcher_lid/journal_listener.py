@@ -30,6 +30,8 @@ class JournalListener:
 
     def start(self) -> None:
         """Start polling the journal for events."""
+        if self.watcher._stopped:
+            return
         self.running = True
         self.thread = threading.Thread(target=self._poll_loop, daemon=True)
         self.thread.start()
