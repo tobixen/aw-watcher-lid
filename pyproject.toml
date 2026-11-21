@@ -78,6 +78,9 @@ known-first-party = ["aw_watcher_lid"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 filterwarnings = ["error"]
+# No async tests; an installed pytest-asyncio would otherwise warn at start-up,
+# which filterwarnings turns into an error.
+addopts = "-p no:asyncio"
 
 [tool.mypy]
 python_version = "3.10"
