@@ -127,3 +127,91 @@ def test_dbus_loop_quits_when_stopped_before_it_runs() -> None:
         thread.start()
         thread.join(timeout=5)
     assert not thread.is_alive()
+
+
+class FlakyServerClient:
+    """An ActivityWatchClient whose server is down until ``up`` is set."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        self.up = False
+        self.buckets: set[str] = set()
+        self.heartbeats: list[tuple[str, object]] = []
+
+    def _check(self) -> None:
+        if not self.up:
+            raise ConnectionError("Connection refused")
+
+    def create_bucket(self, bucket_id: str, event_type: str, queued: bool = False) -> None:
+        self._check()
+        self.buckets.add(bucket_id)
+
+    def heartbeat(self, bucket_id: str, event: object, pulsetime: float, **kwargs: object) -> None:
+        self._check()
+        if bucket_id not in self.buckets:
+            raise RuntimeError(f"404: no bucket {bucket_id}")
+        self.heartbeats.append((bucket_id, event))
+
+
+def _watcher_with_flaky_server() -> tuple[LidWatcher, FlakyServerClient]:
+    with patch("aw_watcher_lid.lid.ActivityWatchClient", FlakyServerClient):
+        watcher = LidWatcher(testing=False)
+    client = watcher.client
+    assert isinstance(client, FlakyServerClient)
+    return watcher, client
+
+
+def test_event_while_server_down_is_logged_not_raised(caplog: pytest.LogCaptureFixture) -> None:
+    """A failed heartbeat must not escape into the D-Bus/GLib callbacks."""
+    watcher, client = _watcher_with_flaky_server()
+    watcher._setup_bucket()
+    watcher.handle_lid_event("closed")  # must not raise
+    assert client.heartbeats == []
+    assert "Event dropped" in caplog.text
+
+
+def test_heartbeat_failure_is_logged_not_raised(caplog: pytest.LogCaptureFixture) -> None:
+    """A server going away after the bucket was created must not raise either."""
+    watcher, client = _watcher_with_flaky_server()
+    client.up = True
+    watcher._setup_bucket()
+    client.up = False
+    watcher.handle_lid_event("open")
+    watcher.handle_lid_event("closed")  # closes the "open" event: must not raise
+    assert client.heartbeats == []
+    assert "Failed to send event" in caplog.text
+
+
+def test_bucket_recreated_after_deletion_at_runtime() -> None:
+    """A bucket deleted while the watcher runs is created again on the next event."""
+    watcher, client = _watcher_with_flaky_server()
+    client.up = True
+    watcher._setup_bucket()
+    client.buckets.clear()  # aw-server's database was wiped
+    watcher.handle_lid_event("closed")  # fails, and marks the bucket as missing
+    watcher.handle_lid_event("open")  # sends the closed lid period
+    assert client.buckets == {watcher.bucket_id}
+    assert len(client.heartbeats) == 1
+
+
+def test_bucket_created_lazily_once_server_is_up() -> None:
+    """A server that was down at start-up gets the bucket with the first event."""
+    watcher, client = _watcher_with_flaky_server()
+    watcher._setup_bucket()
+    assert client.buckets == set()
+
+    client.up = True
+    watcher.handle_lid_event("closed")
+    assert client.buckets == {watcher.bucket_id}
+    assert len(client.heartbeats) == 1
+
+
+def test_bucket_not_recreated_for_every_event() -> None:
+    """Once the bucket exists, events go straight to heartbeat."""
+    watcher, client = _watcher_with_flaky_server()
+    client.up = True
+    watcher._setup_bucket()
+    with patch.object(client, "create_bucket", wraps=client.create_bucket) as create:
+        watcher.handle_lid_event("closed")
+        watcher.handle_lid_event("open")
+    create.assert_not_called()
+    assert len(client.heartbeats) == 2

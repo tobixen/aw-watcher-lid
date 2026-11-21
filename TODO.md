@@ -8,14 +8,6 @@
   - Test boot gap detection with real reboots
   - Test suspend/resume cycles
 
-- [ ] Recover when the ActivityWatch server is down at first start
-  - `_setup_bucket()` logs "Will retry bucket creation on first event", but nothing retries
-  - If the bucket does not exist yet, every heartbeat fails until the watcher is restarted,
-    and `_send_event()` lets the exception escape into the D-Bus/GLib callbacks
-  - Fix: create the bucket lazily in `_send_event()` (a `_bucket_ready` flag) and log
-    heartbeat failures instead of raising
-  - File: `aw_watcher_lid/lid.py`
-
 - [ ] Periodic lid check emits spurious events around suspend/resume
   - `_periodic_lid_check()` compares logind's lid state with `current_lid_state`, which
     `handle_suspend_event()` resets to None
@@ -52,6 +44,7 @@
 
 ## Completed ✅
 
+- [x] Recover when the ActivityWatch server is down at first start
 - [x] Add link to aw-watcher-lid in ActivityWatch ecosystem
   - PR to ActivityWatch docs submitted and accepted
 - [x] Make D-Bus a required dependency

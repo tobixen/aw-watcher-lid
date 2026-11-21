@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A watcher started while the ActivityWatch server was down now creates its bucket with the first event once the server is up, and recreates it if the server loses it; before, every event failed until the watcher was restarted.  Events that cannot be sent are logged instead of raising an exception in the D-Bus/journal callbacks
 - Boot gaps no longer cover time when the system was running but aw-watcher-lid was not; the gap now starts where the last window/AFK activity ended
 
 ### Changed

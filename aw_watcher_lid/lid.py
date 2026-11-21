@@ -45,19 +45,28 @@ class LidWatcher:
         # Event listener (will be set by start())
         self.listener: DbusListener | JournalListener | None = None
         self._stopped = False
+        self._bucket_ready = False
 
-    def _setup_bucket(self) -> None:
-        """Create the ActivityWatch bucket if it doesn't exist."""
+    def _setup_bucket(self) -> bool:
+        """Create the ActivityWatch bucket if it doesn't exist.
+
+        Returns:
+            Whether the bucket is known to exist.  On failure the next
+            event retries.
+        """
         try:
             self.client.create_bucket(
                 self.bucket_id,
                 event_type="systemafkstatus",
                 queued=False,  # Create bucket immediately, not queued
             )
-            logger.info(f"Bucket created/verified: {self.bucket_id}")
         except Exception as e:
             logger.warning(f"Failed to create bucket (server may be down): {e}")
-            logger.info("Will retry bucket creation on first event")
+            logger.info("Will retry bucket creation on the next event")
+            return False
+        logger.info(f"Bucket created/verified: {self.bucket_id}")
+        self._bucket_ready = True
+        return True
 
     def handle_lid_event(self, lid_state: str) -> None:
         """Handle a lid state change event.
@@ -175,13 +184,23 @@ class LidWatcher:
         }
 
         if not self.testing:
+            # Called from D-Bus/GLib callbacks: a server error must not escape.
+            if not self._bucket_ready and not self._setup_bucket():
+                logger.warning(f"Event dropped, no bucket: {event_source} {status} at {timestamp}")
+                return
             # Create Event object and use heartbeat with large pulsetime for event merging
             event = Event(timestamp=timestamp, duration=duration, data=event_data)
-            self.client.heartbeat(
-                self.bucket_id,
-                event=event,
-                pulsetime=3600,  # 1 hour - events within this window will be merged
-            )
+            try:
+                self.client.heartbeat(
+                    self.bucket_id,
+                    event=event,
+                    pulsetime=3600,  # 1 hour - events within this window will be merged
+                )
+            except Exception as e:
+                # The bucket may be gone (aw-server reset): recreate it next time.
+                self._bucket_ready = False
+                logger.warning(f"Failed to send event {event_source} {status} at {timestamp}: {e}")
+                return
 
         logger.info(
             f"Event sent: {event_source} {status} at {timestamp} for {duration}s "
