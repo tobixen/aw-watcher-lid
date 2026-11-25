@@ -21,6 +21,12 @@ class DbusListener:
         self.watcher = watcher
         self.loop: Any | None = None
         self.bus: Any | None = None
+        # The lid state logind last reported.  Kept apart from the watcher's
+        # current_lid_state, which a suspend/resume event resets to None: a
+        # lid check right after PrepareForSleep compared against that would
+        # see a "change", end the suspend after milliseconds and record the
+        # whole sleep as lid-open activity.
+        self.last_lid_state: str | None = None
 
         # Import D-Bus libraries
         try:
@@ -102,10 +108,15 @@ class DbusListener:
             self.watcher.handle_suspend_event("resumed")
 
             # After resume, check lid state in case it changed during sleep
-            self._check_lid_state()
+            self._check_lid_state(after_resume=True)
 
-    def _check_lid_state(self) -> None:
-        """Check current lid state via D-Bus."""
+    def _check_lid_state(self, after_resume: bool = False) -> None:
+        """Check current lid state via D-Bus.
+
+        Args:
+            after_resume: The resume ended the lid period, so a lid that is
+                still closed is reported again
+        """
         if self.bus is None:
             return
 
@@ -123,8 +134,13 @@ class DbusListener:
                 lid_state = "closed" if lid_closed else "open"
                 logger.debug(f"Current lid state: {lid_state}")
 
-                # Only send event if state differs from our tracking
-                if lid_state != self.watcher.current_lid_state:
+                # A poll during a suspend (e.g. the lid close that triggered
+                # it) leaves the reporting to the resume.  Otherwise, only send
+                # an event when logind's lid state actually changed.
+                if self.watcher.current_suspend_state == "suspended":
+                    return
+                if lid_state != self.last_lid_state or (after_resume and lid_state == "closed"):
+                    self.last_lid_state = lid_state
                     self.watcher.handle_lid_event(lid_state)
             except self.dbus.exceptions.DBusException:
                 # LidClosed property not available on this system

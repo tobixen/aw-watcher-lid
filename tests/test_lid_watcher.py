@@ -1,11 +1,15 @@
 """Tests for LidWatcher."""
 
 import threading
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
 
 from aw_watcher_lid.lid import LidWatcher
+
+if TYPE_CHECKING:
+    from aw_watcher_lid.dbus_listener import DbusListener
 
 
 def test_lid_watcher_init() -> None:
@@ -215,3 +219,103 @@ def test_bucket_not_recreated_for_every_event() -> None:
         watcher.handle_lid_event("open")
     create.assert_not_called()
     assert len(client.heartbeats) == 2
+
+
+class FakeLogindProps:
+    """Stands in for logind's Properties interface: answers LidClosed."""
+
+    def __init__(self) -> None:
+        self.lid_closed = False
+
+    def Get(self, interface: str, prop: str) -> bool:  # noqa: N802 - D-Bus API name
+        assert prop == "LidClosed"
+        return self.lid_closed
+
+
+def _listener_with_fake_logind() -> tuple[LidWatcher, "DbusListener", FakeLogindProps, list[str]]:
+    pytest.importorskip("gi")
+    dbus = pytest.importorskip("dbus")
+    from types import SimpleNamespace
+
+    from aw_watcher_lid.dbus_listener import DbusListener
+
+    watcher = LidWatcher(testing=True)
+    listener = DbusListener(watcher)
+    props = FakeLogindProps()
+    listener.bus = SimpleNamespace(get_object=lambda *args: None)
+    listener.dbus = SimpleNamespace(
+        Interface=lambda obj, dbus_interface: props, exceptions=dbus.exceptions
+    )
+    lid_events: list[str] = []
+    original = watcher.handle_lid_event
+
+    def record(lid_state: str) -> None:
+        lid_events.append(lid_state)
+        original(lid_state)
+
+    watcher.handle_lid_event = record  # type: ignore[method-assign]
+    return watcher, listener, props, lid_events
+
+
+def test_periodic_lid_check_does_not_end_suspend() -> None:
+    """A lid check right after PrepareForSleep must leave the suspend running."""
+    watcher, listener, props, lid_events = _listener_with_fake_logind()
+    listener._check_lid_state()
+    assert lid_events == ["open"]
+
+    listener._on_prepare_for_sleep(True)
+    listener._check_lid_state()  # the 5 s timer, lid still open
+
+    assert lid_events == ["open"]
+    assert watcher.current_suspend_state == "suspended"
+
+
+def test_no_extra_lid_event_after_resume_with_unchanged_lid() -> None:
+    watcher, listener, props, lid_events = _listener_with_fake_logind()
+    listener._check_lid_state()
+    listener._on_prepare_for_sleep(True)
+    listener._on_prepare_for_sleep(False)
+    listener._check_lid_state()
+
+    assert lid_events == ["open"]
+    assert watcher.current_suspend_state == "resumed"
+
+
+def test_lid_change_across_suspend_is_reported() -> None:
+    """Lid closed, suspend, lid opened while asleep: resume reports the open."""
+    watcher, listener, props, lid_events = _listener_with_fake_logind()
+    props.lid_closed = True
+    listener._check_lid_state()
+    listener._on_prepare_for_sleep(True)
+    props.lid_closed = False
+    listener._on_prepare_for_sleep(False)
+
+    assert lid_events == ["closed", "open"]
+    assert watcher.current_lid_state == "open"
+
+
+def test_resume_with_lid_still_closed_is_reported() -> None:
+    """Docked or woken by a timer: the closed lid keeps the time system-afk."""
+    watcher, listener, props, lid_events = _listener_with_fake_logind()
+    props.lid_closed = True
+    listener._check_lid_state()
+    listener._on_prepare_for_sleep(True)
+    listener._on_prepare_for_sleep(False)
+
+    assert lid_events == ["closed", "closed"]
+    assert watcher.current_lid_state == "closed"
+
+
+def test_lid_poll_during_lid_triggered_suspend_leaves_it_running() -> None:
+    """Closing the lid suspends; a poll before the freeze must not end the suspend."""
+    watcher, listener, props, lid_events = _listener_with_fake_logind()
+    listener._check_lid_state()
+    props.lid_closed = True
+    listener._on_prepare_for_sleep(True)
+    listener._check_lid_state()  # the 5 s timer, now seeing the closed lid
+
+    assert lid_events == ["open"]
+    assert watcher.current_suspend_state == "suspended"
+
+    listener._on_prepare_for_sleep(False)
+    assert lid_events == ["open", "closed"]

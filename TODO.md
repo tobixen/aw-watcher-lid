@@ -8,15 +8,6 @@
   - Test boot gap detection with real reboots
   - Test suspend/resume cycles
 
-- [ ] Periodic lid check emits spurious events around suspend/resume
-  - `_periodic_lid_check()` compares logind's lid state with `current_lid_state`, which
-    `handle_suspend_event()` resets to None
-  - If the 5 s timer fires between PrepareForSleep(True) and the actual sleep, it closes
-    the suspend event and starts a new "closed" lid event; after every resume it emits
-    an extra "open" event
-  - Fix: track the last lid state reported by logind separately from the event state
-  - File: `aw_watcher_lid/dbus_listener.py`
-
 - [ ] Boot-gap detection is skipped when the ActivityWatch server is down at start-up
   - `BootDetector.check_for_boot_gap()` runs once in `start()`; with the server down,
     `_get_last_event_time()` logs an error and returns None, and nothing retries
