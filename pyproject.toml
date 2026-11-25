@@ -77,10 +77,14 @@ known-first-party = ["aw_watcher_lid"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-filterwarnings = ["error"]
-# No async tests; an installed pytest-asyncio would otherwise warn at start-up,
-# which filterwarnings turns into an error.
-addopts = "-p no:asyncio"
+# No async tests.  An installed pytest-asyncio warns about its unset loop
+# scope, and setting that scope where the plugin is missing warns about an
+# unknown option: filterwarnings would turn either into an error.
+filterwarnings = [
+    "error",
+    "ignore:The configuration option \"asyncio_default_fixture_loop_scope\" is unset:pytest.PytestDeprecationWarning",
+    "ignore:Unknown config option. asyncio_default_fixture_loop_scope:pytest.PytestConfigWarning",
+]
 
 [tool.mypy]
 python_version = "3.10"
