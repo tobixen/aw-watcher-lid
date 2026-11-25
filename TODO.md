@@ -8,15 +8,6 @@
   - Test boot gap detection with real reboots
   - Test suspend/resume cycles
 
-- [ ] Boot-gap detection is skipped when the ActivityWatch server is down at start-up
-  - `BootDetector.check_for_boot_gap()` runs once in `start()`; with the server down,
-    `_get_last_event_time()` logs an error and returns None, and nothing retries
-  - So when the watcher starts before aw-server, the downtime before that boot is
-    never recorded as a boot gap
-  - Fix: run the check after the first successful bucket setup in `_send_event()`
-    (or retry it then) when it could not run at start-up
-  - Files: `aw_watcher_lid/lid.py`, `aw_watcher_lid/boot_detector.py`
-
 - [ ] Boot-gap detection trusts aw-watcher-afk-prompt events as proof of activity
   - `_get_last_activity_end()` picks any bucket whose id contains "afk", which also
     matches `aw-watcher-afk-prompt_<host>`

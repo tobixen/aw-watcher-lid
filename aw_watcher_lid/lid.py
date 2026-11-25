@@ -46,6 +46,8 @@ class LidWatcher:
         self.listener: DbusListener | JournalListener | None = None
         self._stopped = False
         self._bucket_ready = False
+        # The boot-gap check could not reach the server: retry with the next event
+        self._boot_check_pending = False
 
     def _setup_bucket(self) -> bool:
         """Create the ActivityWatch bucket if it doesn't exist.
@@ -67,6 +69,16 @@ class LidWatcher:
         logger.info(f"Bucket created/verified: {self.bucket_id}")
         self._bucket_ready = True
         return True
+
+    def _check_boot_gap(self) -> None:
+        """Record the downtime before this boot.
+
+        If the server cannot be reached, the next event that finds it up
+        retries the check before it is sent.
+        """
+        from .boot_detector import BootDetector
+
+        self._boot_check_pending = not BootDetector(self).check_for_boot_gap()
 
     def handle_lid_event(self, lid_state: str) -> None:
         """Handle a lid state change event.
@@ -158,7 +170,7 @@ class LidWatcher:
         suspend_state: str | None,
         boot_gap: bool,
         event_source: str,
-    ) -> None:
+    ) -> bool:
         """Send an event to ActivityWatch.
 
         Args:
@@ -168,6 +180,9 @@ class LidWatcher:
             suspend_state: "suspended", "resumed", or None
             boot_gap: Whether this is a boot gap event
             event_source: "lid", "suspend", or "boot"
+
+        Returns:
+            Whether the event was sent (always true in testing mode)
         """
         # Determine status based on state
         if lid_state == "closed" or suspend_state == "suspended" or boot_gap:
@@ -187,7 +202,10 @@ class LidWatcher:
             # Called from D-Bus/GLib callbacks: a server error must not escape.
             if not self._bucket_ready and not self._setup_bucket():
                 logger.warning(f"Event dropped, no bucket: {event_source} {status} at {timestamp}")
-                return
+                return False
+            # The boot gap is older than this event, so it goes first
+            if self._boot_check_pending and not boot_gap:
+                self._check_boot_gap()
             # Create Event object and use heartbeat with large pulsetime for event merging
             event = Event(timestamp=timestamp, duration=duration, data=event_data)
             try:
@@ -200,12 +218,13 @@ class LidWatcher:
                 # The bucket may be gone (aw-server reset): recreate it next time.
                 self._bucket_ready = False
                 logger.warning(f"Failed to send event {event_source} {status} at {timestamp}: {e}")
-                return
+                return False
 
         logger.info(
             f"Event sent: {event_source} {status} at {timestamp} for {duration}s "
             f"(lid={lid_state}, suspend={suspend_state})"
         )
+        return True
 
     def start(self) -> None:
         """Start the watcher.
@@ -219,11 +238,7 @@ class LidWatcher:
         if self._stopped:
             return
 
-        # Check for boot gaps on startup
-        from .boot_detector import BootDetector
-
-        boot_detector = BootDetector(self)
-        boot_detector.check_for_boot_gap()
+        self._check_boot_gap()
 
         # A signal during start-up stopped us before any listener existed
         # to quit; starting one now would block until SIGKILL.

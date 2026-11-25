@@ -148,7 +148,7 @@ def _detector_with_activity(
     watcher._send_event = send  # type: ignore[method-assign]
     detector = BootDetector(watcher)
     detector._get_boot_time = lambda: boot_time  # type: ignore[method-assign]
-    detector._get_last_event_time = lambda: last_lid_event_end  # type: ignore[method-assign]
+    detector._get_last_event_time = lambda before: last_lid_event_end  # type: ignore[method-assign]
     return detector, send
 
 
@@ -193,3 +193,83 @@ def test_boot_gap_without_activity_covers_whole_gap() -> None:
     send.assert_called_once()
     assert send.call_args[1]["timestamp"] == last_lid
     assert send.call_args[1]["duration"] == (boot - last_lid).total_seconds()
+
+
+def _detector_with_server(
+    client: object, boot_time: datetime | None = None
+) -> tuple[BootDetector, MagicMock]:
+    watcher = LidWatcher(testing=True)
+    watcher.testing = False
+    watcher.client = client  # type: ignore[assignment]
+    send = MagicMock(return_value=True)
+    watcher._send_event = send  # type: ignore[method-assign]
+    detector = BootDetector(watcher)
+    detector._get_boot_time = lambda: boot_time  # type: ignore[method-assign]
+    return detector, send
+
+
+BOOT = datetime(2026, 9, 21, 8, 0, tzinfo=timezone.utc)
+
+
+def test_boot_gap_ignores_lid_events_after_boot() -> None:
+    """A retry after an event already got through still finds the pre-boot gap."""
+    before = Event(timestamp=BOOT - timedelta(hours=11), duration=timedelta(hours=1))
+    after = Event(timestamp=BOOT + timedelta(minutes=5), duration=timedelta(0))
+    client = FakeAWClient({"aw-watcher-lid_test": [before, after]})
+    detector, send = _detector_with_server(client, BOOT)
+
+    assert detector.check_for_boot_gap() is True
+    send.assert_called_once()
+    assert send.call_args[1]["timestamp"] == BOOT - timedelta(hours=10)
+
+
+class DownClient:
+    def get_events(self, *args: object, **kwargs: object) -> list[Event]:
+        raise ConnectionError("Connection refused")
+
+    def get_buckets(self) -> dict[str, dict]:
+        raise ConnectionError("Connection refused")
+
+
+def test_check_returns_false_when_server_down() -> None:
+    detector, send = _detector_with_server(DownClient(), BOOT)
+    assert detector.check_for_boot_gap() is False
+    send.assert_not_called()
+
+
+def test_check_returns_false_when_bucket_list_fails() -> None:
+    lid = Event(timestamp=BOOT - timedelta(hours=11), duration=timedelta(hours=1))
+    client = FakeAWClient({"aw-watcher-lid_test": [lid]})
+    client.get_buckets = DownClient().get_buckets  # type: ignore[method-assign]
+    detector, send = _detector_with_server(client, BOOT)
+    assert detector.check_for_boot_gap() is False
+    send.assert_not_called()
+
+
+def test_check_returns_false_when_gap_not_sent() -> None:
+    lid = Event(timestamp=BOOT - timedelta(hours=11), duration=timedelta(hours=1))
+    detector, send = _detector_with_server(FakeAWClient({"aw-watcher-lid_test": [lid]}), BOOT)
+    send.return_value = False
+    assert detector.check_for_boot_gap() is False
+
+
+def test_check_does_not_retry_a_malformed_event() -> None:
+    """Only server errors are retried; a bad event would fail on every retry."""
+    client = FakeAWClient({"aw-watcher-lid_test": []})
+    client.get_events = lambda *args, **kwargs: [{"timestamp": "garbage", "duration": 0}]  # type: ignore[method-assign]
+    detector, send = _detector_with_server(client, BOOT)
+    assert detector.check_for_boot_gap() is True
+    send.assert_not_called()
+
+
+def test_check_returns_true_when_nothing_to_retry() -> None:
+    disabled, _ = _detector_with_server(DownClient(), BOOT)
+    disabled.watcher.config["enable_boot_detection"] = False
+    no_boot_time, _ = _detector_with_server(DownClient(), None)
+    empty, _ = _detector_with_server(FakeAWClient({"aw-watcher-lid_test": []}), BOOT)
+    short = Event(timestamp=BOOT - timedelta(minutes=2), duration=timedelta(seconds=30))
+    short_gap, send = _detector_with_server(FakeAWClient({"aw-watcher-lid_test": [short]}), BOOT)
+
+    for detector in (disabled, no_boot_time, empty, short_gap):
+        assert detector.check_for_boot_gap() is True
+    send.assert_not_called()

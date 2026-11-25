@@ -23,41 +23,55 @@ class BootDetector:
         self.watcher = watcher
         self.boot_gap_threshold = watcher.config.get("boot_gap_threshold", 300.0)
 
-    def check_for_boot_gap(self) -> None:
+    def check_for_boot_gap(self) -> bool:
         """Check if there was a gap since last run (system was off/rebooted).
 
         This is called on startup to detect if the system was shut down
-        between the last event and the current boot.
+        between the last event and the current boot, and retried with the
+        next event when the server could not be reached.
 
         The boot gap is validated against actual ActivityWatch activity:
         window/AFK activity during the supposed gap means the system was
         running without this watcher, so the gap starts where the last such
         activity ended.
+
+        Returns:
+            False if ActivityWatch could not be queried or the boot gap event
+            could not be sent, so the check should be retried; True otherwise
         """
         if not self.watcher.config.get("enable_boot_detection", True):
             logger.debug("Boot gap detection disabled")
-            return
+            return True
 
         # Get current boot time from /proc/uptime
         boot_time = self._get_boot_time()
         if not boot_time:
             logger.warning("Could not determine boot time")
-            return
+            return True
 
         logger.info(f"System boot time: {boot_time}")
 
-        # Get last event from our lid bucket
-        last_event_time = self._get_last_event_time()
-        if not last_event_time:
-            logger.info("No previous events found, skipping boot gap detection")
-            return
+        try:
+            # Get last event from our lid bucket
+            last_event_time = self._get_last_event_time(before=boot_time)
+            if not last_event_time:
+                logger.info("No previous events found, skipping boot gap detection")
+                return True
 
-        logger.info(f"Last lid event time: {last_event_time}")
+            logger.info(f"Last lid event time: {last_event_time}")
 
-        # The system was up (without this watcher) until the last recorded
-        # window/AFK activity, so the downtime starts no earlier than that
+            # The system was up (without this watcher) until the last recorded
+            # window/AFK activity, so the downtime starts no earlier than that
+            last_activity_end = self._get_last_activity_end(last_event_time, boot_time)
+        except OSError as e:  # requests' errors included
+            logger.warning(f"Boot gap check failed (server may be down), will retry: {e}")
+            return False
+        except Exception as e:
+            # Would fail the same way on every retry
+            logger.error(f"Boot gap check failed: {e}")
+            return True
+
         gap_start = last_event_time
-        last_activity_end = self._get_last_activity_end(last_event_time, boot_time)
         if last_activity_end and last_activity_end > gap_start:
             logger.info(f"Found activity until {last_activity_end}, boot gap starts there")
             gap_start = last_activity_end
@@ -65,7 +79,7 @@ class BootDetector:
         gap_duration = (boot_time - gap_start).total_seconds()
         if gap_duration <= self.boot_gap_threshold:
             logger.debug(f"Boot gap too short: {gap_duration:.0f}s")
-            return
+            return True
 
         logger.info(
             f"Boot gap detected: {gap_duration:.0f}s ({gap_duration / 3600:.1f}h) "
@@ -73,7 +87,7 @@ class BootDetector:
         )
 
         # Create synthetic boot gap event
-        self.watcher._send_event(
+        return self.watcher._send_event(
             timestamp=gap_start,
             duration=gap_duration,
             lid_state=None,
@@ -111,51 +125,52 @@ class BootDetector:
 
         return None
 
-    def _get_last_event_time(self) -> datetime | None:
-        """Get the timestamp of the last event from ActivityWatch.
+    def _get_last_event_time(self, before: datetime) -> datetime | None:
+        """Get the end of the last event from ActivityWatch.
+
+        Args:
+            before: Only consider events that started before this, so that
+                events sent since the boot are left out
 
         Returns:
             Last event timestamp, or None if no events exist
+
+        Raises:
+            Exception: if the server cannot be queried
         """
         if self.watcher.testing:
             logger.debug("Testing mode, skipping last event lookup")
             return None
 
-        try:
-            # Query the last event from our bucket
-            events = self.watcher.client.get_events(
-                self.watcher.bucket_id,
-                limit=1,
-            )
+        # Query the last event from our bucket
+        events = self.watcher.client.get_events(
+            self.watcher.bucket_id,
+            limit=1,
+            end=before,
+        )
 
-            if not events:
-                return None
-
-            # Get the event end time (timestamp + duration)
-            last_event = events[0]
-            event_start_raw = last_event["timestamp"]
-            event_duration_raw = last_event["duration"]
-
-            # Handle both datetime and string timestamps
-            if isinstance(event_start_raw, str):
-                event_start: datetime = datetime.fromisoformat(
-                    event_start_raw.replace("Z", "+00:00")
-                )
-            else:
-                event_start = event_start_raw
-
-            # Handle both timedelta and float durations
-            if isinstance(event_duration_raw, (int, float)):
-                event_duration: timedelta = timedelta(seconds=event_duration_raw)
-            else:
-                event_duration = event_duration_raw
-
-            event_end: datetime = event_start + event_duration
-            return event_end
-
-        except Exception as e:
-            logger.error(f"Failed to get last event: {e}")
+        if not events:
             return None
+
+        # Get the event end time (timestamp + duration)
+        last_event = events[0]
+        event_start_raw = last_event["timestamp"]
+        event_duration_raw = last_event["duration"]
+
+        # Handle both datetime and string timestamps
+        if isinstance(event_start_raw, str):
+            event_start: datetime = datetime.fromisoformat(event_start_raw.replace("Z", "+00:00"))
+        else:
+            event_start = event_start_raw
+
+        # Handle both timedelta and float durations
+        if isinstance(event_duration_raw, (int, float)):
+            event_duration: timedelta = timedelta(seconds=event_duration_raw)
+        else:
+            event_duration = event_duration_raw
+
+        event_end: datetime = event_start + event_duration
+        return event_end
 
     def _get_last_activity_end(self, start_time: datetime, end_time: datetime) -> datetime | None:
         """Find when the last window/AFK activity in a time period ended.
@@ -166,17 +181,16 @@ class BootDetector:
 
         Returns:
             End time of the latest activity found, or None if no activity
+
+        Raises:
+            Exception: if the bucket list cannot be fetched
         """
         if self.watcher.testing:
             return None
 
         last_activity_end: datetime | None = None
 
-        try:
-            buckets = self.watcher.client.get_buckets()
-        except Exception as e:
-            logger.error(f"Failed to get buckets: {e}")
-            return None
+        buckets = self.watcher.client.get_buckets()
 
         for bucket_id in buckets:
             if "window" not in bucket_id and "afk" not in bucket_id:

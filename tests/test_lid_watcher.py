@@ -1,10 +1,13 @@
 """Tests for LidWatcher."""
 
 import threading
+from collections.abc import Iterator
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
+from aw_core.models import Event
 
 from aw_watcher_lid.lid import LidWatcher
 
@@ -140,6 +143,7 @@ class FlakyServerClient:
         self.up = False
         self.buckets: set[str] = set()
         self.heartbeats: list[tuple[str, object]] = []
+        self.stored: dict[str, list[Event]] = {}
 
     def _check(self) -> None:
         if not self.up:
@@ -154,6 +158,15 @@ class FlakyServerClient:
         if bucket_id not in self.buckets:
             raise RuntimeError(f"404: no bucket {bucket_id}")
         self.heartbeats.append((bucket_id, event))
+
+    def get_buckets(self) -> dict[str, dict]:
+        self._check()
+        return {bucket_id: {} for bucket_id in self.buckets}
+
+    def get_events(self, bucket_id: str, limit: int = -1, **kwargs: object) -> list[Event]:
+        self._check()
+        events = sorted(self.stored.get(bucket_id, []), key=lambda e: e.timestamp, reverse=True)
+        return events if limit < 0 else events[:limit]
 
 
 def _watcher_with_flaky_server() -> tuple[LidWatcher, FlakyServerClient]:
@@ -219,6 +232,74 @@ def test_bucket_not_recreated_for_every_event() -> None:
         watcher.handle_lid_event("open")
     create.assert_not_called()
     assert len(client.heartbeats) == 2
+
+
+BOOT = datetime(2026, 9, 21, 8, 0, tzinfo=timezone.utc)
+
+
+def _watcher_with_old_lid_event() -> tuple[LidWatcher, FlakyServerClient]:
+    """A flaky server whose lid bucket holds an event that ended 10 h before boot."""
+    watcher, client = _watcher_with_flaky_server()
+    client.buckets.add(watcher.bucket_id)
+    client.stored[watcher.bucket_id] = [
+        Event(timestamp=BOOT - timedelta(hours=11), duration=timedelta(hours=1))
+    ]
+    return watcher, client
+
+
+@pytest.fixture
+def fixed_boot_time() -> Iterator[None]:
+    with patch("aw_watcher_lid.boot_detector.BootDetector._get_boot_time", return_value=BOOT):
+        yield
+
+
+def _boot_gaps(client: FlakyServerClient) -> list[object]:
+    return [e for _, e in client.heartbeats if e["data"]["boot_gap"]]  # type: ignore[index]
+
+
+@pytest.mark.usefixtures("fixed_boot_time")
+def test_boot_gap_recorded_once_server_is_up() -> None:
+    """A server down at start-up gets the boot gap before the first event."""
+    watcher, client = _watcher_with_old_lid_event()
+    watcher._setup_bucket()
+    watcher._check_boot_gap()
+    assert client.heartbeats == []
+
+    client.up = True
+    watcher.handle_lid_event("closed")
+    assert len(client.heartbeats) == 2
+    gap = client.heartbeats[0][1]
+    assert gap["data"]["boot_gap"] is True  # type: ignore[index]
+    assert gap.timestamp == BOOT - timedelta(hours=10)  # type: ignore[attr-defined]
+    assert client.heartbeats[1][1]["data"]["lid_state"] == "closed"  # type: ignore[index]
+
+    watcher.handle_lid_event("open")
+    assert len(_boot_gaps(client)) == 1
+
+
+@pytest.mark.usefixtures("fixed_boot_time")
+def test_boot_gap_retried_while_server_stays_down() -> None:
+    """Events dropped while the server is down do not use up the retry."""
+    watcher, client = _watcher_with_old_lid_event()
+    watcher._check_boot_gap()
+    watcher.handle_lid_event("closed")
+    watcher.handle_lid_event("open")
+    assert client.heartbeats == []
+
+    client.up = True
+    watcher.handle_lid_event("closed")
+    assert len(_boot_gaps(client)) == 1
+
+
+@pytest.mark.usefixtures("fixed_boot_time")
+def test_boot_gap_not_repeated_when_server_was_up() -> None:
+    watcher, client = _watcher_with_old_lid_event()
+    client.up = True
+    watcher._setup_bucket()
+    watcher._check_boot_gap()
+    watcher.handle_lid_event("closed")
+    watcher.handle_lid_event("open")
+    assert len(_boot_gaps(client)) == 1
 
 
 class FakeLogindProps:
